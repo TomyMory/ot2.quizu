@@ -101,6 +101,19 @@
             line-height: 1.3;
         }
 
+        /* 初級テキスト用の豪華な装飾 */
+        .level-title {
+            font-size: 5.5rem;
+            font-weight: bold;
+            background: linear-gradient(to bottom, #ffffff 0%, #f3e5ab 30%, #d4af37 70%, #8b6b33 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            /* グラデーション文字を発光させるため drop-shadow を使用 */
+            filter: drop-shadow(0 0 15px rgba(212, 175, 55, 0.8)) drop-shadow(0 0 35px rgba(212, 175, 55, 0.5));
+            letter-spacing: 0.15em;
+            padding-left: 0.15em; /* 文字間隔のズレによるセンタリング補正 */
+        }
+
         /* 魔法のボタン（大きめ） */
         .magic-btn {
             border: 2px solid var(--gold);
@@ -258,12 +271,9 @@
             <h1 class="magic-title font-bold mt-2 pb-2">魔法学校<br>リハビリクイズ</h1>
         </div>
         
-        <!-- SVGのエンブレム -->
-        <div class="w-32 h-32 my-10 mx-auto opacity-90 drop-shadow-[0_0_15px_rgba(212,175,55,0.8)]">
-            <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-                <path d="M50 10 L60 40 L90 50 L60 60 L50 90 L40 60 L10 50 L40 40 Z" fill="var(--gold)" />
-                <circle cx="50" cy="50" r="15" fill="var(--bg-dark)" stroke="var(--gold)" stroke-width="3"/>
-            </svg>
+        <!-- レベル表示（初級） -->
+        <div class="my-6 mx-auto">
+            <h2 class="level-title">初級</h2>
         </div>
 
         <button onclick="changeScreen('screen-menu')" class="magic-btn w-full py-5 rounded-lg text-2xl tracking-widest font-bold">
