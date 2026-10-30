@@ -21,7 +21,7 @@
 
         body {
             font-family: 'Sawarabi Mincho', serif;
-            background: radial-gradient(circle at 50% 30%, var(--bg-light) 0%, var(--bg-dark) 100%);
+            background: linear-gradient(135deg, #2a0a4a 0%, #0d021c 100%);
             color: var(--gold-light);
             margin: 0;
             min-height: 100vh;
@@ -29,22 +29,62 @@
             font-size: 1.1rem; /* スマホ向けに文字を大きく */
         }
 
-        /* 魔法のオーブ（背景演出） */
-        #orbs-container {
+        /* 宙に浮くろうそく演出 */
+        #candles-container {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
             z-index: -1;
             pointer-events: none;
+            overflow: hidden;
         }
-        .orb {
+
+        .candle-wrapper {
             position: absolute;
-            border-radius: 50%;
-            background: radial-gradient(circle, rgba(212,175,55,0.4) 0%, transparent 70%);
-            animation: float 8s infinite ease-in-out alternate;
+            animation: floatCandle 5s infinite ease-in-out alternate;
         }
-        @keyframes float {
-            0% { transform: translateY(0) scale(1); opacity: 0.3; }
-            100% { transform: translateY(-30px) scale(1.5); opacity: 0.8; }
+
+        .candle-body {
+            width: 14px;
+            height: 60px;
+            background: linear-gradient(to bottom, #fffae6 0%, #f4e8c1 20%, #cca352 100%);
+            border-radius: 4px 4px 2px 2px;
+            position: relative;
+            box-shadow: inset -3px 0 5px rgba(0,0,0,0.1), 2px 3px 5px rgba(0,0,0,0.6);
+        }
+
+        .candle-wick {
+            position: absolute;
+            top: -4px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 2px;
+            height: 5px;
+            background: #222;
+        }
+
+        .candle-flame {
+            position: absolute;
+            top: -20px;
+            left: 50%;
+            width: 12px;
+            height: 22px;
+            background: #ffcc00;
+            border-radius: 50% 50% 20% 20%;
+            box-shadow: 
+                0 0 15px 4px rgba(255, 150, 0, 0.8),
+                0 0 30px 8px rgba(255, 200, 0, 0.6),
+                0 0 50px 15px rgba(255, 255, 0, 0.4);
+            animation: flicker 0.12s infinite alternate;
+        }
+
+        @keyframes floatCandle {
+            0% { transform: translateY(0); }
+            100% { transform: translateY(-30px); }
+        }
+
+        @keyframes flicker {
+            0% { transform: translateX(-50%) scale(0.95); opacity: 0.8; box-shadow: 0 0 10px 2px rgba(255,150,0,0.8), 0 0 20px 5px rgba(255,200,0,0.6); }
+            100% { transform: translateX(-50%) scale(1.05); opacity: 1; box-shadow: 0 0 15px 4px rgba(255,150,0,0.9), 0 0 30px 8px rgba(255,200,0,0.7), 0 0 50px 15px rgba(255,255,0,0.5); }
         }
 
         .gold-text {
@@ -190,8 +230,8 @@
 </head>
 <body class="flex flex-col items-center justify-center p-4">
 
-    <!-- 背景の魔法のオーブ -->
-    <div id="orbs-container"></div>
+    <!-- 宙に浮くろうそく群 -->
+    <div id="candles-container"></div>
 
     <!-- 正解時の豪華演出 -->
     <div id="success-overlay">
@@ -335,20 +375,47 @@
         let currentQuestionId = null;
         let animationFrameId = null;
 
-        // 魔法のオーブ生成
-        function createOrbs() {
-            const container = document.getElementById('orbs-container');
-            for (let i = 0; i < 20; i++) {
-                const orb = document.createElement('div');
-                orb.className = 'orb';
-                const size = Math.random() * 80 + 20;
-                orb.style.width = size + 'px';
-                orb.style.height = size + 'px';
-                orb.style.left = Math.random() * 100 + 'vw';
-                orb.style.top = Math.random() * 100 + 'vh';
-                orb.style.animationDuration = (Math.random() * 5 + 5) + 's';
-                orb.style.animationDelay = (Math.random() * 5) + 's';
-                container.appendChild(orb);
+        // 宙に浮くろうそく生成
+        function createCandles() {
+            const container = document.getElementById('candles-container');
+            const numCandles = 30; // ろうそくの数
+            for (let i = 0; i < numCandles; i++) {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'candle-wrapper';
+                
+                // ランダムな位置
+                const left = Math.random() * 100;
+                const top = Math.random() * 100;
+                wrapper.style.left = `${left}vw`;
+                wrapper.style.top = `${top}vh`;
+                
+                // ランダムな浮遊アニメーション
+                const floatDelay = Math.random() * 5;
+                const floatDuration = 4 + Math.random() * 4;
+                wrapper.style.animationDelay = `-${floatDelay}s`;
+                wrapper.style.animationDuration = `${floatDuration}s`;
+
+                const body = document.createElement('div');
+                body.className = 'candle-body';
+                
+                // ランダムなスケール（大きさ）
+                const scale = 0.4 + Math.random() * 0.7;
+                body.style.transform = `scale(${scale})`;
+                body.style.transformOrigin = "bottom center";
+
+                const wick = document.createElement('div');
+                wick.className = 'candle-wick';
+                
+                const flame = document.createElement('div');
+                flame.className = 'candle-flame';
+                // 炎の揺らぎタイミングをズラす
+                flame.style.animationDelay = `-${Math.random()}s`;
+
+                body.appendChild(wick);
+                body.appendChild(flame);
+                wrapper.appendChild(body);
+                
+                container.appendChild(wrapper);
             }
         }
 
@@ -527,7 +594,7 @@
         }
 
         window.onload = () => {
-            createOrbs();
+            createCandles();
             // 初期状態はCSSのopacity 0なので、TOP画面をフェードイン
             setTimeout(() => {
                 document.getElementById('screen-top').style.opacity = '1';
