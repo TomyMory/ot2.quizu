@@ -1,1 +1,543 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>魔法学校リハビリクイズ</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Sawarabi+Mincho&family=Cinzel:wght@700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --gold: #d4af37;
+            --gold-light: #f3e5ab;
+            --bg-dark: #230833;
+            --bg-light: #4c1d63;
+            --parchment-bg: #f4eacc;
+            --parchment-text: #3b2808;
+        }
 
+        body {
+            font-family: 'Sawarabi Mincho', serif;
+            background: radial-gradient(circle at 50% 30%, var(--bg-light) 0%, var(--bg-dark) 100%);
+            color: var(--gold-light);
+            margin: 0;
+            min-height: 100vh;
+            overflow-x: hidden;
+            font-size: 1.1rem; /* スマホ向けに文字を大きく */
+        }
+
+        /* 魔法のオーブ（背景演出） */
+        #orbs-container {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: -1;
+            pointer-events: none;
+        }
+        .orb {
+            position: absolute;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(212,175,55,0.4) 0%, transparent 70%);
+            animation: float 8s infinite ease-in-out alternate;
+        }
+        @keyframes float {
+            0% { transform: translateY(0) scale(1); opacity: 0.3; }
+            100% { transform: translateY(-30px) scale(1.5); opacity: 0.8; }
+        }
+
+        .gold-text {
+            color: var(--gold);
+            text-shadow: 0 0 10px rgba(212, 175, 55, 0.5);
+        }
+
+        .magic-title {
+            font-size: 2.8rem;
+            background: linear-gradient(to bottom, #fff8dc 0%, #d4af37 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 20px rgba(212, 175, 55, 0.4);
+            line-height: 1.3;
+        }
+
+        /* 魔法のボタン（大きめ） */
+        .magic-btn {
+            border: 2px solid var(--gold);
+            background: rgba(35, 8, 51, 0.8);
+            color: var(--gold-light);
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 15px rgba(212, 175, 55, 0.3);
+            font-size: 1.2rem;
+            padding: 1rem;
+        }
+
+        .magic-btn:active {
+            background: rgba(212, 175, 55, 0.2);
+            box-shadow: 0 0 25px rgba(212, 175, 55, 0.8), inset 0 0 15px rgba(212, 175, 55, 0.6);
+            transform: scale(0.98);
+        }
+
+        .magic-btn.cleared {
+            border-color: #7FFF00; /* 光る黄緑色 */
+            color: rgba(255, 255, 255, 0.2);
+            background: rgba(20, 40, 20, 0.8);
+            box-shadow: 0 0 15px rgba(127, 255, 0, 0.5), inset 0 0 10px rgba(127, 255, 0, 0.3);
+            pointer-events: none;
+        }
+        .magic-btn.cleared::after {
+            content: '封印解除';
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            color: #7FFF00; /* 光る黄緑色 */
+            font-size: 1.6rem;
+            font-weight: bold;
+            opacity: 1;
+            text-shadow: 0 0 15px rgba(127, 255, 0, 0.8), 0 0 20px black;
+            width: 100%;
+            text-align: center;
+            letter-spacing: 0.2em;
+        }
+
+        /* 羊皮紙のUI */
+        .parchment-container {
+            background-color: var(--parchment-bg);
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4' viewBox='0 0 4 4'%3E%3Cpath fill='%23d0b888' fill-opacity='0.4' d='M1 3h1v1H1V3zm2-2h1v1H3V1z'%3E%3C/path%3E%3C/svg%3E");
+            box-shadow: inset 0 0 40px #8b6b33, 0 15px 30px rgba(0,0,0,0.9);
+            border: 3px solid #5a3f12;
+            border-radius: 8px;
+            color: var(--parchment-text);
+            position: relative;
+        }
+
+        .parchment-input {
+            background: rgba(255, 255, 255, 0.6);
+            border: 2px solid #8b6b33;
+            border-radius: 4px;
+            color: #3b2808;
+            font-family: inherit;
+            font-size: 1.3rem;
+            padding: 1rem;
+        }
+        .parchment-input:focus {
+            outline: none;
+            background: rgba(255, 255, 255, 0.9);
+            box-shadow: 0 0 10px #8b6b33;
+        }
+
+        .cinzel-font { font-family: 'Cinzel', serif; }
+
+        /* フェード画面遷移 */
+        .screen {
+            display: none;
+            opacity: 0;
+            transition: opacity 0.6s ease-in-out;
+        }
+        .screen.active {
+            display: flex;
+        }
+
+        /* 正解時の豪華な演出オーバーレイ */
+        #success-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(35, 8, 51, 0.95);
+            z-index: 200;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+        }
+        #success-overlay.show { opacity: 1; }
+        
+        .success-text {
+            font-size: 4rem;
+            color: var(--gold);
+            text-shadow: 0 0 20px var(--gold), 0 0 40px #fff;
+            transform: scale(0.5);
+            transition: transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            font-weight: bold;
+        }
+        #success-overlay.show .success-text { transform: scale(1); }
+
+        /* SVG魔法陣アニメーション */
+        .magic-circle-svg {
+            width: 80vw;
+            max-width: 300px;
+            height: auto;
+            animation: spin 20s linear infinite;
+        }
+        .magic-circle-inner {
+            animation: spin-reverse 15s linear infinite;
+            transform-origin: center;
+        }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        @keyframes spin-reverse { 100% { transform: rotate(-360deg); } }
+
+        /* CSS装飾 */
+        .deco-line {
+            width: 80%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--gold), transparent);
+            margin: 1rem auto;
+        }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-center p-4">
+
+    <!-- 背景の魔法のオーブ -->
+    <div id="orbs-container"></div>
+
+    <!-- 正解時の豪華演出 -->
+    <div id="success-overlay">
+        <svg class="magic-circle-svg mb-8" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+            <g stroke="var(--gold)" fill="none" stroke-width="2">
+                <circle cx="100" cy="100" r="95" stroke-dasharray="10 5" />
+                <circle cx="100" cy="100" r="85" />
+                <polygon points="100,15 174,142 26,142" />
+                <polygon points="100,185 26,58 174,58" />
+                <g class="magic-circle-inner">
+                    <circle cx="100" cy="100" r="50" stroke-width="1.5" />
+                    <rect x="65" y="65" width="70" height="70" transform="rotate(45 100 100)" />
+                    <rect x="65" y="65" width="70" height="70" />
+                </g>
+            </g>
+        </svg>
+        <p class="success-text" id="success-msg">見事！</p>
+    </div>
+
+    <!-- 1. TOP画面 -->
+    <div id="screen-top" class="screen active flex-col items-center justify-center w-full max-w-md h-full text-center space-y-12">
+        <div class="space-y-4">
+            <p class="text-lg tracking-widest text-gray-300">作業療法学科2年生プレゼンツ</p>
+            <h1 class="magic-title font-bold mt-2 pb-2">魔法学校<br>リハビリクイズ</h1>
+        </div>
+        
+        <!-- SVGのエンブレム -->
+        <div class="w-32 h-32 my-10 mx-auto opacity-90 drop-shadow-[0_0_15px_rgba(212,175,55,0.8)]">
+            <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                <path d="M50 10 L60 40 L90 50 L60 60 L50 90 L40 60 L10 50 L40 40 Z" fill="var(--gold)" />
+                <circle cx="50" cy="50" r="15" fill="var(--bg-dark)" stroke="var(--gold)" stroke-width="3"/>
+            </svg>
+        </div>
+
+        <button onclick="changeScreen('screen-menu')" class="magic-btn w-full py-5 rounded-lg text-2xl tracking-widest font-bold">
+            試練を開始する
+        </button>
+    </div>
+
+    <!-- 2. クイズTOP（メニュー）画面 -->
+    <div id="screen-menu" class="screen flex-col items-center w-full max-w-md h-full space-y-8 pt-6 pb-16">
+        <h2 class="text-3xl gold-text font-bold text-center w-full">試練の場所</h2>
+        <div class="deco-line"></div>
+        
+        <p class="text-lg leading-relaxed text-center px-2 text-gray-200">
+            ５つの問題がこの学院内に散りばめられている。<br>
+            問題を探し出し、答えを刻んでクリアを目指せ。
+        </p>
+
+        <div id="quest-list" class="w-full flex flex-col space-y-5 mt-8">
+            <!-- JavaScriptで生成 -->
+        </div>
+
+        <div class="mt-10 text-center">
+            <p id="progress-text" class="text-2xl gold-text tracking-widest font-bold"></p>
+        </div>
+    </div>
+
+    <!-- 3. 解答入力画面 -->
+    <div id="screen-quiz" class="screen flex-col items-center justify-center w-full max-w-md h-full">
+        <div class="parchment-container w-full p-8 flex flex-col space-y-8">
+            <div class="text-center pb-4 relative z-10">
+                <!-- 装飾 -->
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#8b6b33" stroke-width="2" class="mx-auto mb-4">
+                    <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                </svg>
+                <h3 id="quiz-location" class="text-2xl font-bold leading-relaxed"></h3>
+                <div class="w-full h-[2px] bg-[#8b6b33] mt-4 opacity-50"></div>
+            </div>
+
+            <div class="relative z-10 py-4">
+                <div class="flex flex-col">
+                    <input type="text" id="quiz-answer" placeholder="答えを刻み込め..." class="parchment-input w-full text-center" autocomplete="off">
+                    <p id="error-msg" class="text-red-700 text-lg font-bold mt-4 text-center opacity-0 transition-opacity">答えが違うようだ...</p>
+                </div>
+            </div>
+
+            <div class="flex flex-col space-y-4 relative z-10 pt-4">
+                <button onclick="checkAnswer()" class="bg-[#5a3f12] text-[#f4e4bc] py-4 text-xl rounded font-bold hover:bg-[#3b2808] transition-colors shadow-lg">
+                    回答を刻む
+                </button>
+                <button onclick="changeScreen('screen-menu')" class="bg-transparent border-2 border-[#5a3f12] text-[#5a3f12] py-3 text-lg rounded font-bold hover:bg-[rgba(90,63,18,0.1)] transition-colors">
+                    一覧へ戻る
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 4. クリア画面 -->
+    <div id="screen-clear" class="screen flex-col items-center justify-center w-full max-w-md h-full text-center space-y-10">
+        <h1 class="cinzel-font text-4xl gold-text font-bold leading-tight">
+            CONGRATULATION<br>
+            <span class="text-3xl font-sans mt-4 block font-bold text-white">全問正解おめでとう！</span>
+        </h1>
+
+        <div class="bg-[rgba(255,255,255,0.1)] border-2 border-[var(--gold)] p-6 rounded-xl my-6 w-full">
+            <p class="text-xl text-white font-bold leading-relaxed">
+                この画面をスクショして<br>受付の学生に提示してね！
+            </p>
+        </div>
+
+        <div class="py-8 flex justify-center">
+            <!-- 豪華な魔法陣SVG -->
+            <svg class="magic-circle-svg" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                <g stroke="var(--gold)" fill="none" stroke-width="1.5">
+                    <!-- 外枠 -->
+                    <circle cx="100" cy="100" r="95" stroke-width="3"/>
+                    <circle cx="100" cy="100" r="90" stroke-dasharray="5 5" />
+                    <!-- 六芒星 -->
+                    <polygon points="100,15 174,142 26,142" />
+                    <polygon points="100,185 26,58 174,58" />
+                    <!-- 内側の回転する要素 -->
+                    <g class="magic-circle-inner">
+                        <circle cx="100" cy="100" r="60" />
+                        <rect x="58" y="58" width="84" height="84" transform="rotate(45 100 100)" />
+                        <rect x="58" y="58" width="84" height="84" />
+                        <circle cx="100" cy="100" r="30" stroke-dasharray="10 5"/>
+                    </g>
+                </g>
+            </svg>
+        </div>
+
+        <!-- リアルタイム時計（不正防止） -->
+        <div class="mt-8 border-t-2 border-[#6441a5] pt-6 w-full">
+            <p class="text-sm text-gray-300 mb-2">=== 認証タイムスタンプ ===</p>
+            <p id="clock" class="text-2xl font-mono text-[var(--gold-light)] tracking-widest font-bold"></p>
+        </div>
+    </div>
+
+    <script>
+        // 問題データ（問題文は現地掲示のためプロンプト削除）
+        const questions = [
+            { id: 1, location: "１．2階の西を向いている銅像の下", type: "exact", answer: ["犬", "いぬ", "イヌ"] },
+            { id: 2, location: "２．〇〇〇の場所", type: "exact", answer: ["卵", "たまご", "タマゴ"] },
+            { id: 3, location: "３．〇〇〇の場所", type: "exact", answer: ["ほうき", "ホウキ", "箒"] },
+            { id: 4, location: "４．〇〇〇の場所", type: "text" },
+            { id: 5, location: "５．〇〇〇の場所", type: "dajare" }
+        ];
+
+        let progress = JSON.parse(localStorage.getItem('hogwartsQuizProgress')) || [false, false, false, false, false];
+        let currentQuestionId = null;
+        let animationFrameId = null;
+
+        // 魔法のオーブ生成
+        function createOrbs() {
+            const container = document.getElementById('orbs-container');
+            for (let i = 0; i < 20; i++) {
+                const orb = document.createElement('div');
+                orb.className = 'orb';
+                const size = Math.random() * 80 + 20;
+                orb.style.width = size + 'px';
+                orb.style.height = size + 'px';
+                orb.style.left = Math.random() * 100 + 'vw';
+                orb.style.top = Math.random() * 100 + 'vh';
+                orb.style.animationDuration = (Math.random() * 5 + 5) + 's';
+                orb.style.animationDelay = (Math.random() * 5) + 's';
+                container.appendChild(orb);
+            }
+        }
+
+        // 画面のフェード切り替え
+        function changeScreen(screenId) {
+            const currentScreen = document.querySelector('.screen.active');
+            if (currentScreen) {
+                currentScreen.style.opacity = '0';
+                setTimeout(() => {
+                    currentScreen.classList.remove('active');
+                    activateNewScreen(screenId);
+                }, 600); // CSSのtransition時間と合わせる
+            } else {
+                activateNewScreen(screenId);
+            }
+        }
+
+        function activateNewScreen(screenId) {
+            const newScreen = document.getElementById(screenId);
+            newScreen.classList.add('active');
+            // 要素が表示された後にopacityを変更してフェードイン
+            setTimeout(() => {
+                newScreen.style.opacity = '1';
+            }, 50);
+
+            if (screenId === 'screen-menu') {
+                renderMenu();
+            } else if (screenId === 'screen-clear') {
+                startClock();
+            }
+        }
+
+        function renderMenu() {
+            const list = document.getElementById('quest-list');
+            list.innerHTML = '';
+            let clearedCount = 0;
+
+            questions.forEach((q, index) => {
+                const isCleared = progress[index];
+                if(isCleared) clearedCount++;
+
+                const btn = document.createElement('button');
+                btn.className = `magic-btn w-full p-5 rounded-lg text-left flex items-center justify-between ${isCleared ? 'cleared' : ''}`;
+                
+                // SVGの矢印
+                const arrowSvg = !isCleared ? `
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M9 18l6-6-6-6"/>
+                    </svg>
+                ` : '';
+
+                btn.innerHTML = `
+                    <span class="text-xl ${isCleared ? 'opacity-20' : ''}">${q.location}</span>
+                    ${arrowSvg}
+                `;
+                
+                if (!isCleared) {
+                    btn.onclick = () => openQuiz(q.id);
+                }
+                list.appendChild(btn);
+            });
+
+            document.getElementById('progress-text').innerText = `封印解除: ${clearedCount} / 5`;
+
+            if (clearedCount === 5) {
+                setTimeout(() => {
+                    changeScreen('screen-clear');
+                }, 1000);
+            }
+        }
+
+        function openQuiz(id) {
+            currentQuestionId = id;
+            const q = questions.find(x => x.id === id);
+            document.getElementById('quiz-location').innerText = q.location;
+            document.getElementById('quiz-answer').value = '';
+            document.getElementById('error-msg').style.opacity = '0';
+            changeScreen('screen-quiz');
+        }
+
+        function checkAnswer() {
+            const input = document.getElementById('quiz-answer').value.trim();
+            const q = questions.find(x => x.id === currentQuestionId);
+            
+            if (input === '') {
+                showError("何も刻まれていないようだ...");
+                return;
+            }
+
+            let isCorrect = false;
+            let isDarkMagic = false;
+
+            if (q.type === 'exact') {
+                if (q.answer.includes(input)) isCorrect = true;
+            } else if (q.type === 'text') {
+                isCorrect = true;
+            } else if (q.type === 'dajare') {
+                isCorrect = true;
+                const cleanText = input.replace(/[\s　]/g, '');
+                // 2文字以上の繰り返し検知
+                const regex = /(..+).*\1/; 
+                if (regex.test(cleanText)) {
+                    isDarkMagic = true;
+                }
+            }
+
+            if (isCorrect) {
+                if (isDarkMagic) {
+                    document.getElementById('success-msg').innerText = "闇の魔力が満ちた！";
+                    document.getElementById('success-msg').style.color = "#ff4444";
+                    document.querySelector('#success-overlay svg g').setAttribute('stroke', '#ff4444');
+                } else {
+                    document.getElementById('success-msg').innerText = "見事！";
+                    document.getElementById('success-msg').style.color = "var(--gold)";
+                    document.querySelector('#success-overlay svg g').setAttribute('stroke', 'var(--gold)');
+                }
+                triggerSuccessAndReturn();
+            } else {
+                showError("答えが違うようだ...");
+            }
+        }
+
+        function showError(msg) {
+            const errorMsg = document.getElementById('error-msg');
+            errorMsg.innerText = msg;
+            errorMsg.style.opacity = '1';
+            const inputField = document.getElementById('quiz-answer');
+            inputField.style.transform = 'translateX(-10px)';
+            setTimeout(() => inputField.style.transform = 'translateX(10px)', 100);
+            setTimeout(() => inputField.style.transform = 'translateX(-10px)', 200);
+            setTimeout(() => inputField.style.transform = 'translateX(0)', 300);
+        }
+
+        // 正解時の豪華な演出
+        function triggerSuccessAndReturn() {
+            const overlay = document.getElementById('success-overlay');
+            overlay.style.display = 'flex';
+            setTimeout(() => overlay.classList.add('show'), 50);
+            
+            setTimeout(() => {
+                overlay.classList.remove('show');
+                setTimeout(() => {
+                    overlay.style.display = 'none';
+                    markAsCleared();
+                }, 500);
+            }, 2500); // 演出の表示時間
+        }
+
+        function markAsCleared() {
+            const index = questions.findIndex(x => x.id === currentQuestionId);
+            progress[index] = true;
+            localStorage.setItem('hogwartsQuizProgress', JSON.stringify(progress));
+            changeScreen('screen-menu');
+        }
+
+        // リアルタイム時計（コンマ2桁ミリ秒）
+        function startClock() {
+            function update() {
+                const now = new Date();
+                const yyyy = now.getFullYear();
+                const mm = String(now.getMonth() + 1).padStart(2, '0');
+                const dd = String(now.getDate()).padStart(2, '0');
+                const hh = String(now.getHours()).padStart(2, '0');
+                const min = String(now.getMinutes()).padStart(2, '0');
+                const ss = String(now.getSeconds()).padStart(2, '0');
+                const ms = String(Math.floor(now.getMilliseconds() / 10)).padStart(2, '0');
+                
+                document.getElementById('clock').innerText = `${yyyy}/${mm}/${dd} ${hh}:${min}:${ss}.${ms}`;
+                
+                if (document.getElementById('screen-clear').classList.contains('active')) {
+                    animationFrameId = requestAnimationFrame(update);
+                }
+            }
+            if(animationFrameId) cancelAnimationFrame(animationFrameId);
+            update();
+        }
+
+        window.onload = () => {
+            createOrbs();
+            // 初期状態はCSSのopacity 0なので、TOP画面をフェードイン
+            setTimeout(() => {
+                document.getElementById('screen-top').style.opacity = '1';
+            }, 100);
+
+            const clearedCount = progress.filter(p => p).length;
+            if (clearedCount === 5) {
+                changeScreen('screen-menu'); // メニュー経由で自動クリア画面へ
+            }
+        };
+    </script>
+</body>
+</html>
